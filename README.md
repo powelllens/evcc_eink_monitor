@@ -7,7 +7,7 @@ The aim of this project is to use the EVCC Rest-API to realize a basic Monitor t
 The software was primarily developed and tested for the Waveshare E-Ink Display 400x300, 4.2inch E-Ink raw display, three-color. The ESP8266 controller will frequently aquire the status of the evcc server and Update the Display to visualize the actual status.
 
 ## Features
-1. Easy to setup Config Menü, thanks to IoTWebConf
+1. Easy to setup Config MenÃ¼, thanks to IoTWebConf
 2. Statuspage for quick functional checks
 3. Accesspoint for inital setup (via phone, computer)
 4. Clear Display if no car is connected
@@ -18,8 +18,8 @@ The software was primarily developed and tested for the Waveshare E-Ink Display 
 ![E-Ink Display Loading min + pv](docs/images/loadingminpv.jpg)
 ![E-Ink Display Loading now](docs/images/loadingnow.jpg)
 ![E-Ink Display Loading off](docs/images/loadingoff.jpg)
-![Webserver Setup page](docs/images/setuppage.jpg)
-![Webserver control page](docs/images/controlpage.jpg)
+![Webserver Setup page](docs/images/setuppage.JPG)
+![Webserver control page](docs/images/controlpage.JPG)
 
 ## Knows Issues / Limitations
 1. No Fallback strategy if Admin password is lost
