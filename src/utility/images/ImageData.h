@@ -32,10 +32,26 @@
 #ifndef _IMAGEDATA_H_
 #define _IMAGEDATA_H_
 
+/* Includes ------------------------------------------------------------------*/
+#include <stdint.h>
+
+struct sIMG {
+  const unsigned char *Image;
+  uint16_t Width;
+  uint16_t Height;
+};
+
+extern const sIMG Image_Car;
+extern const sIMG Image_EVCC_B;
+extern const sIMG Image_EVCC_R;
+extern const sIMG Image_Strike;
+
+/*
 extern const unsigned char image_car[];
 extern const unsigned char image_evcc_1[];
 extern const unsigned char image_evcc_2[];
 extern const unsigned char image_strike[];
+*/
 
 #endif
 /* FILE END */

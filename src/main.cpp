@@ -1,12 +1,13 @@
 #include <Arduino.h>
+#include <Scheduler.h>
+#include <Task.h>
+#include <LeanTask.h>
+#include <RestTask.h>
+#include <MonitorTask.h>
 #include <IotWebConf.h>
 #include <IotWebConfTParameter.h>
 #include <ESP8266HTTPClient.h>
-#include <ArduinoJson.h>
-#include <DEV_Config.h>
 #include <config.h>
-#include <evccRest.h>
-#include <evccMonitor.h>
 
 // UpdateServer includes
 #ifdef ESP8266
@@ -16,11 +17,15 @@
 #include <IotWebConfESP32HTTPUpdateServer.h>
 #endif
 
+#define STRING_LEN 64
+#define NUMBER_LEN 32
+
 // -- Callback method declarations.
 void handleRoot();
 void configSaved();
 void wifiConnected();
 bool formValidator(iotwebconf::WebRequestWrapper *webRequestWrapper);
+void setEvccApiDataPtr(evccDataClass *ptr);
 
 DNSServer dnsServer;
 WebServer server(80);
@@ -29,9 +34,6 @@ ESP8266HTTPUpdateServer httpUpdater;
 #elif defined(ESP32)
 HTTPUpdateServer httpUpdater;
 #endif
-
-#define STRING_LEN 64
-#define NUMBER_LEN 32
 
 IotWebConf iotWebConf(WIFI_AP_SSID, &dnsServer, &server, WIFI_AP_DEFAULT_PASSWORD, CONFIG_VERSION);
 
@@ -42,22 +44,39 @@ iotwebconf::IntTParameter<u32> serverport =
     iotwebconf::Builder<iotwebconf::IntTParameter<u32>>("serverport").label("Server Port").defaultValue(7070).min(1).max(99999).step(1).placeholder("1..99999").build();
 
 boolean needReset = false;
-boolean connected = false;
 
-// Rest API variables
-EVCCRestAPI evccrestapi;
-void getEvccApiData(void);
+evccDataClass *evccapidataptr;
 
-// Monitor variables
-#define DisplayUpdatetimerDelay 900000
-unsigned long DisplayUpdatelastTime = 0;
-EVCCMonitor evccmonitor;
+static RestTask restTask;
+static MonitorTask monitorTask;
+
+class IoTWebConfTask : public LeanTask
+{
+public:
+  void setup()
+  {
+    Serial.println("Start IoT Task");
+  }
+  void loop()
+  {
+    // -- doLoop should be called as frequently as possible.
+    if (needReset)
+    {
+      // Doing a chip reset caused by config changes
+      printf("Rebooting after 1 second.");
+      delay(1000);
+      ESP.restart();
+    }
+    iotWebConf.doLoop();
+    this->delay(100);
+  }
+} iotwebconfTask;
 
 void setup()
 {
-  DEV_Module_Init();
-
-  Serial.println();
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println("IoTWebConf Task Start");
   Serial.println("Starting up...");
 
   evccsettings.addItem(&servername);
@@ -86,29 +105,26 @@ void setup()
   server.onNotFound([]()
                     { iotWebConf.handleNotFound(); });
 
-  evccrestapi.setServerConfig(servername.value(), serverport.value());
-
-  evccmonitor.InitMonitor();
-
   Serial.println("Ready.");
+
+  // Setup other Tasks
+  // Set evccapidata in monitor class
+  monitorTask.setEvccApiDataPtr(restTask.getAPIData());
+  monitorTask.setWifiDefaultUserPW(WIFI_AP_SSID, WIFI_AP_DEFAULT_PASSWORD, (iotWebConf.getApPasswordParameter())->valueBuffer);
+  evccapidataptr = restTask.getAPIData();
+
+  restTask.setServerConfig(servername.value(), serverport.value());
+
+  iotwebconfTask.setInterval(100);
+  Scheduler.start(&iotwebconfTask);
+  restTask.setInterval(10000);
+  Scheduler.start(&restTask);
+  Scheduler.start(&monitorTask);
+
+  Scheduler.begin();
 }
 
-void loop()
-{
-  // -- doLoop should be called as frequently as possible.
-  if (needReset)
-  {
-    // Doing a chip reset caused by config changes
-    printf("Rebooting after 1 second.");
-    delay(1000);
-    ESP.restart();
-  }
-
-  getEvccApiData();
-  evccmonitor.doLoop();
-  iotWebConf.doLoop();
-  yield();
-}
+void loop() {}
 
 /**
  * Handle web requests to "/" path.
@@ -131,15 +147,15 @@ void handleRoot()
   s += "<li>EVCC Server Port: ";
   s += serverport.value();
   s += "<li>EVCC Title: ";
-  s += evccmonitor.evccAPIData.siteTitle;
+  s += evccapidataptr->globalapidata.siteTitle;
   s += "<li>EVCC Loadpoint Title: ";
-  s += evccmonitor.evccAPIData.loadPointData[0].title;
+  s += evccapidataptr->globalapidata.loadPointData[0].title;
   s += "<li>Car Title: ";
-  s += evccmonitor.evccAPIData.loadPointData[0].vehicleTitle;
+  s += evccapidataptr->globalapidata.loadPointData[0].vehicleTitle;
   s += "<li>Car Connected: ";
-  s += evccmonitor.evccAPIData.loadPointData[0].connected;
+  s += evccapidataptr->globalapidata.loadPointData[0].connected;
   s += "<li>Car charging: ";
-  s += evccmonitor.evccAPIData.loadPointData[0].charging;
+  s += evccapidataptr->globalapidata.loadPointData[0].charging;
   s += "</ul>";
   s += "Go to <a href='config'>configure page</a> to change values.";
   s += "</body></html>\n";
@@ -156,7 +172,8 @@ void configSaved()
 void wifiConnected()
 {
   Serial.println("WiFi connection established.");
-  connected = true;
+  restTask.setWifiAvaliable();
+  monitorTask.setWifiAvaliable();
 }
 
 bool formValidator(iotwebconf::WebRequestWrapper *webRequestWrapper)
@@ -173,20 +190,4 @@ bool formValidator(iotwebconf::WebRequestWrapper *webRequestWrapper)
     }
   */
   return valid;
-}
-
-void getEvccApiData()
-{
-  // Send an HTTP GET request
-  if (connected)
-  {
-    evccrestapi.updateData();
-    if (evccrestapi.MonitorUpdateAvaliable || (evccrestapi.RestAPIData.loadPointData[0].connected && DEV_Check_Time(DisplayUpdatelastTime,DisplayUpdatetimerDelay)))
-    {
-      evccmonitor.UpdateRequired = true;
-      evccmonitor.evccAPIData = evccrestapi.RestAPIData;
-      evccrestapi.MonitorUpdateAvaliable = false;
-      DisplayUpdatelastTime = millis();
-    }
-  }
 }

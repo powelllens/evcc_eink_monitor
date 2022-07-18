@@ -1,10 +1,10 @@
 /**
   ******************************************************************************
-  * @file    font20.c
+  * @file    font20.cpp
   * @author  MCD Application Team
   * @version V1.0.0
   * @date    18-February-2014
-  * @brief   This file provides text font20 for STM32xx-EVAL's LCD driver. 
+  * @brief   This file provides text font20. 
   ******************************************************************************
   * @attention
   *
@@ -37,9 +37,10 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "fonts.h"
+#include <avr/pgmspace.h>
 
 // Character bitmaps for Courier New 15pt
-const uint8_t Font20_Table[] = 
+const uint8_t Font20_Table[] PROGMEM = 
 {
 	// @0 ' ' (14 pixels wide)
 	0x00, 0x00, //               
