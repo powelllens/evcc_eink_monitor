@@ -23,12 +23,10 @@ void RestTask::setServerConfig(const char *ServerName, unsigned int ServerPort)
 
 void RestTask::updateData()
 {
-
     char serverPath[160] = "";
     sprintf(serverPath, "http://%s:%i/api/state", this->servername, this->serverport);
     String jsonBuffer;
     jsonBuffer = httpGETRequest(serverPath);
-
     DynamicJsonDocument doc(3500);
 
     DeserializationError error = deserializeJson(doc, jsonBuffer);
@@ -41,8 +39,7 @@ void RestTask::updateData()
         return;
     }
     JsonObject result = doc["result"];
-
-    strcpy(this->evccapidata.globalapidata.siteTitle, result["siteTitle"]);
+    strcpy(this->evccapidata.globalapidata.siteTitle, result["siteTitle"] | "N/A");
     JsonObject result_loadpoints_0 = result["loadpoints"][0];
     LoadpointData loadpointdata;
 
@@ -71,9 +68,9 @@ void RestTask::updateData()
     tmp_updateavaliable = tmp_updateavaliable || (boolbuffer != loadpointdata.connected);
     tmp_updateavaliable = tmp_updateavaliable || (!match(loadpointdata.mode, result_loadpoints_0["mode"]));
 
-    strcpy(loadpointdata.mode, result_loadpoints_0["mode"]);
-    strcpy(loadpointdata.title, result_loadpoints_0["title"]);
-    strcpy(loadpointdata.vehicleTitle, result_loadpoints_0["vehicleTitle"]);
+    strcpy(loadpointdata.mode, result_loadpoints_0["mode"] | "N/A");
+    strcpy(loadpointdata.title, result_loadpoints_0["title"] | "N/A");
+    strcpy(loadpointdata.vehicleTitle, result_loadpoints_0["vehicleTitle"] | "N/A");
 
     this->evccapidata.globalapidata.loadPointData[0] = loadpointdata;
     this->evccapidata.setNewData(tmp_updateavaliable);
