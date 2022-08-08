@@ -19,10 +19,19 @@ struct LoadpointData
     char vehicleTitle[30] = "";
 };
 
+struct SitePower
+{
+    float actual_gridPower;
+    float actual_pvPower;
+    int hist_gridpower[400];
+    int hist_pvPower[400];
+};
+
 struct SiteData
 {
     char siteTitle[30] = "";
     LoadpointData loadPointData[2];
+    SitePower sitePower;
 };
 
 class evccDataClass

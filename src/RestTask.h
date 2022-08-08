@@ -9,8 +9,6 @@
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 
-#define REST_UPDATEINTERVAL 10000 // 10sec
-
 class RestTask : public LeanTask
 {
 public:
@@ -18,6 +16,7 @@ public:
     evccDataClass *getAPIData() { return &this->evccapidata; };
     void setServerConfig(const char *servername, unsigned int serverport);
     void setWifiAvaliable() { this->WifiAvaliable = true; };
+    void setUpdateInterval(u16 interval) { this->REST_UPDATEINTERVAL = interval * 1000; };
 
 protected:
     void setup();
@@ -34,6 +33,8 @@ private:
 
     bool ServerConfigured = false;
     bool WifiAvaliable = false;
+
+    u32 REST_UPDATEINTERVAL = 10000;
 };
 
 #endif

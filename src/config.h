@@ -6,12 +6,12 @@
 #define Language_English
 #endif
 
-#define VERSION "1.0.0"
+#define VERSION "1.1.0"
 //const char VERSION[] = "1.0.0";
 
 // Modifying the config version will probably cause a loss of the existig configuration.
 // Be careful!
-#define CONFIG_VERSION "1.0.0"
+#define CONFIG_VERSION "1.1.0"
 //const char CONFIG_VERSION[] = "1.0.0";
 
 const char WIFI_AP_SSID[] = "EVCC E-Ink Monitor";

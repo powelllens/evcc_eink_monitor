@@ -9,7 +9,7 @@ void MonitorTask::setup()
 
 void MonitorTask::loop()
 {
-    if (!this->WifiAvaliable && this->Mode == MODE_CLEAR && this->InitalStart)
+    if (!this->WifiAvaliable && this->Mode == MODE_IDLE && this->InitalStart)
     {
         this->Mode = MODE_WELCOME;
         this->InitalStart = false;
@@ -36,9 +36,9 @@ void MonitorTask::setDisplay()
         }
         switch (this->Mode)
         {
-        case MODE_CLEAR:
+        case MODE_IDLE:
             Debug("Mode clear");
-            this->epd.ClearFrame();
+            this->IdleScreen();
             break;
         case MODE_WELCOME:
             Debug("Mode Welcome");
@@ -52,6 +52,22 @@ void MonitorTask::setDisplay()
         this->epd.DisplayFrame();
         this->epd.Sleep();
     }
+}
+
+void MonitorTask::setIdleMode(char State[STRING_LEN])
+{
+    if (match(State, IDLE_MODE_CLEAR_txt))
+    {
+        this->IdleMode = IDLE_MODE_CLEAR;
+    };
+    if (match(State, IDLE_MODE_GRAPH_txt))
+    {
+        this->IdleMode = IDLE_MODE_GRAPH;
+    };
+    if (match(State, IDLE_MODE_LOGO_txt))
+    {
+        this->IdleMode = IDLE_MODE_LOGO;
+    };
 }
 
 void MonitorTask::setWifiDefaultUserPW(const char *WIFI_AP_SSID, const char *WIFI_AP_DEFAULT_PASSWORD, const char *ADMIN_PASSWORD)
@@ -78,13 +94,13 @@ void MonitorTask::getEvccApiData()
         }
         else
         {
-            this->Mode = MODE_CLEAR;
+            this->Mode = MODE_IDLE;
             this->UpdateRequired = true;
             this->evccapidataptr->setClearNew();
         }
     }
 
-    if (((millis() - this->UpdatelastTime) > MONITOR_MAXINTERVAL) && (this->Mode != MODE_CLEAR))
+    if (((millis() - this->UpdatelastTime) > MONITOR_MAXINTERVAL) && (this->Mode != MODE_IDLE))
     {
         this->UpdateRequired = true;
     }
@@ -95,7 +111,39 @@ void MonitorTask::setWifiAvaliable()
     this->WifiAvaliable = true;
     if (this->Mode == MODE_WELCOME)
     {
-        this->Mode = MODE_CLEAR;
+        this->Mode = MODE_IDLE;
+    }
+}
+
+void MonitorTask::IdleScreen()
+{
+    switch (this->IdleMode)
+    {
+    case IDLE_MODE_CLEAR:
+        this->epd.ClearFrame();
+        break;
+    case IDLE_MODE_GRAPH:
+        
+        //this->evccapidataptr->globalapidata.sitePower.hist_gridpower[]
+
+        break;
+    case IDLE_MODE_LOGO:
+        //  Create a new image cache named IMAGE_BW and fill it with white
+        unsigned char image[2550];
+        Paint paint(image, 400, 50); // width should be the multiple of 8
+        Debug("Start Logo");
+
+        this->epd.ClearFrame();
+
+        int randx;
+        int randy;
+
+        randx = random(10, 300);
+        randy = random(10, 260);
+        // evcc Logo
+        this->DrawImageToDisplay(&paint, randx, randy, &Image_EVCC_B, BLACK);
+        this->DrawImageToDisplay(&paint, randx + 51, randy, &Image_EVCC_R, RED);
+        break;
     }
 }
 

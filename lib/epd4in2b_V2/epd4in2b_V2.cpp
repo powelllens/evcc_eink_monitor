@@ -182,7 +182,7 @@ void Epd::SetPartialWindowRed(const unsigned char *buffer_red, int x, int y, int
     SendCommand(PARTIAL_WINDOW);
     SendData(x >> 8);
     SendData(x & 0xf8); // x should be the multiple of 8, the last 3 bit will always be ignored
-    SendData(((x & 0xf8) + w - 1) >> 8);
+    SendData((x + w - 1) >> 8);
     SendData(((x & 0xf8) + w - 1) | 0x07);
     SendData(y >> 8);
     SendData(y & 0xff);
@@ -269,7 +269,7 @@ void Epd::DisplayFrame(void)
  *         You can use Epd::Reset() to awaken and use Epd::Init() to initialize.
  */
 void Epd::Sleep()
-{   
+{
     Debug("Display - Sleep");
     SendCommand(VCOM_AND_DATA_INTERVAL_SETTING);
     SendData(0xF7); // border floating

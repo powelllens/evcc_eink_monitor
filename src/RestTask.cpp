@@ -39,6 +39,8 @@ void RestTask::updateData()
         return;
     }
     JsonObject result = doc["result"];
+    this->evccapidata.globalapidata.sitePower.actual_gridPower = result["gridPower"];
+    this->evccapidata.globalapidata.sitePower.actual_pvPower = result["pvPower"];
     strcpy(this->evccapidata.globalapidata.siteTitle, result["siteTitle"] | "N/A");
     JsonObject result_loadpoints_0 = result["loadpoints"][0];
     LoadpointData loadpointdata;
