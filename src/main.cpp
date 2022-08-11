@@ -48,7 +48,7 @@ iotwebconf::TextTParameter<STRING_LEN> servername = iotwebconf::Builder<iotwebco
 iotwebconf::IntTParameter<u32> serverport = iotwebconf::Builder<iotwebconf::IntTParameter<u32>>("serverport").label("Server Port").defaultValue(7070).min(1).max(99999).step(1).placeholder("1..99999").build();
 
 iotwebconf::ParameterGroup displaysettings = iotwebconf::ParameterGroup("displaysettings", "Display Settings");
-iotwebconf::IntTParameter<u16> dataupdatetime = iotwebconf::Builder<iotwebconf::IntTParameter<u16>>("dataupdatetime").label("Data Update Interval (s)").defaultValue(10).min(5).max(65000).step(1).placeholder("5..65000").build();
+iotwebconf::IntTParameter<u16> dataupdatetime = iotwebconf::Builder<iotwebconf::IntTParameter<u16>>("dataupdatetime").label("Data Update Interval (s)").defaultValue(10).min(5).max(1200).step(1).placeholder("5..1200").build();
 iotwebconf::IntTParameter<u16> displayupdatetime = iotwebconf::Builder<iotwebconf::IntTParameter<u16>>("displayupdatetime").label("Display Update Interval (s)").defaultValue(900).min(300).max(65000).step(1).placeholder("300..65000").build();
 IotWebConfSelectParameter idleDisplayParam = IotWebConfSelectParameter("Select Display Idle", "chooseParam", idleDisplayValue, STRING_LEN, (char *)idleDisplayStates, (char *)idleDisplayStateNames, sizeof(idleDisplayStates) / STRING_LEN, STRING_LEN, idleDisplayStates[0]);
 

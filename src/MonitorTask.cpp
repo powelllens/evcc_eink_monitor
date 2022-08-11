@@ -100,9 +100,12 @@ void MonitorTask::getEvccApiData()
         }
     }
 
-    if (((millis() - this->UpdatelastTime) > MONITOR_MAXINTERVAL) && (this->Mode != MODE_IDLE))
+    if (((millis() - this->UpdatelastTime) > MONITOR_MAXINTERVAL))
     {
-        this->UpdateRequired = true;
+        if (this->Mode != MODE_IDLE || (this->Mode == MODE_IDLE && this->IdleMode != IDLE_MODE_CLEAR))
+        {
+            this->UpdateRequired = true;
+        }
     }
 }
 
@@ -123,8 +126,8 @@ void MonitorTask::IdleScreen()
         this->epd.ClearFrame();
         break;
     case IDLE_MODE_GRAPH:
-        
-        //this->evccapidataptr->globalapidata.sitePower.hist_gridpower[]
+
+        // this->evccapidataptr->globalapidata.sitePower.hist_gridpower[]
 
         break;
     case IDLE_MODE_LOGO:
