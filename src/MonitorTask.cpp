@@ -42,6 +42,7 @@ void MonitorTask::setDisplay()
             break;
         case MODE_WELCOME:
             Debug("Mode Welcome");
+            //this->IdleScreen();
             this->WelcomeScreen();
             break;
         case MODE_MAIN:
@@ -120,20 +121,145 @@ void MonitorTask::setWifiAvaliable()
 
 void MonitorTask::IdleScreen()
 {
+    char buffer_char[128 + sizeof(char)];
+    //  Create a new image cache named IMAGE_BW and fill it with white
+    unsigned char image[2550];
+
+    Paint paint(image, 64, 300); // width should be the multiple of 8
+
     switch (this->IdleMode)
     {
     case IDLE_MODE_CLEAR:
         this->epd.ClearFrame();
         break;
     case IDLE_MODE_GRAPH:
+        paint.SetHeight(300);
+        paint.SetWidth(64);
 
-        // this->evccapidataptr->globalapidata.sitePower.hist_gridpower[]
+        /*for (byte i = 0; i < 71; i++)
+        {
+            this->evccapidataptr->globalapidata.sitePower.hist_gridPower[i] = random(-2000, 5000);
+            this->evccapidataptr->globalapidata.sitePower.hist_pvPower[i] = random(0, 3000);
+            if (this->evccapidataptr->globalapidata.sitePower.hist_gridPower[i] > this->evccapidataptr->globalapidata.sitePower.hist_max)
+            {
+                this->evccapidataptr->globalapidata.sitePower.hist_max = this->evccapidataptr->globalapidata.sitePower.hist_gridPower[i];
+            }
+            if (this->evccapidataptr->globalapidata.sitePower.hist_pvPower[i] > this->evccapidataptr->globalapidata.sitePower.hist_max)
+            {
+                this->evccapidataptr->globalapidata.sitePower.hist_max = this->evccapidataptr->globalapidata.sitePower.hist_pvPower[i];
+            }
+
+            if (this->evccapidataptr->globalapidata.sitePower.hist_gridPower[i] < this->evccapidataptr->globalapidata.sitePower.hist_min)
+            {
+                this->evccapidataptr->globalapidata.sitePower.hist_min = this->evccapidataptr->globalapidata.sitePower.hist_gridPower[i];
+            }
+            if (this->evccapidataptr->globalapidata.sitePower.hist_pvPower[i] < this->evccapidataptr->globalapidata.sitePower.hist_min)
+            {
+                this->evccapidataptr->globalapidata.sitePower.hist_min = this->evccapidataptr->globalapidata.sitePower.hist_pvPower[i];
+            }
+        }*/
+
+        int graphy0;
+        graphy0 = 30;
+        int graphy1;
+        graphy1 = 290;
+
+        double m;
+        double b;
+        m = double(graphy0 - graphy1) / double(this->evccapidataptr->globalapidata.sitePower.hist_max - this->evccapidataptr->globalapidata.sitePower.hist_min);
+        b = double(graphy0) - m * double(this->evccapidataptr->globalapidata.sitePower.hist_max);
+
+        int minpoint;
+        int maxpoint;
+        minpoint = this->evccapidataptr->globalapidata.sitePower.hist_min / 1000.0;
+        maxpoint = this->evccapidataptr->globalapidata.sitePower.hist_max / 1000.0;
+
+        byte dataposblack;
+        byte dataposred;
+        dataposblack = 71;
+        dataposred = dataposblack;
+        byte datawidth;
+        bool DataOK;
+
+        this->epd.ClearFrame();
+        paint.Clear(UNCOLORED);
+
+        sprintf(buffer_char, "%.2f kW", (this->evccapidataptr->globalapidata.sitePower.hist_max / 1000.0));
+        this->DrawStringToDisplay(&paint, 2, this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_max), buffer_char, &Font12, COLORED, BLACK);
+        sprintf(buffer_char, "%.2f kW", (this->evccapidataptr->globalapidata.sitePower.hist_min / 1000.0));
+        this->DrawStringToDisplay(&paint, 2, this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_min), buffer_char, &Font12, COLORED, BLACK);
+        // this->DrawStringToDisplay(&paint, 2 + 28, this->getYfromX(m, b, 0) - 6, "0 kW", &Font12, COLORED, BLACK);
+        for (int i = minpoint; i <= maxpoint; i++)
+        {
+            sprintf(buffer_char, "%i kW", i);
+            if (i < 0)
+            {
+                this->DrawStringToDisplay(&paint, 2 + 21, this->getYfromX(m, b, double(i) * 1000.0) - 6, buffer_char, &Font12, COLORED, BLACK);
+            }
+            else
+            {
+                this->DrawStringToDisplay(&paint, 2 + 28, this->getYfromX(m, b, double(i) * 1000.0) - 6, buffer_char, &Font12, COLORED, BLACK);
+            }
+        }
+
+        for (byte xpart = 0; xpart < 5; xpart++)
+        {
+            paint.SetHeight(300);
+            paint.SetWidth(64);
+            paint.Clear(UNCOLORED);
+            datawidth = 0;
+            for (byte i = 0; i < 16; i++)
+            {
+                if (dataposblack <= 1)
+                {
+                    break;
+                };
+                paint.DrawLine(i * 4, this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_gridPower[dataposblack]), (i + 1) * 4, this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_gridPower[dataposblack - 1]), COLORED);
+                dataposblack--;
+                datawidth++;
+            }
+            for (int i = minpoint; i <= maxpoint; i++)
+            {
+                paint.DrawHorizontalLine(0, this->getYfromX(m, b, double(i) * 1000.0), datawidth * 4, COLORED);
+            }
+
+            if (xpart == 0)
+            {
+                paint.DrawVerticalLine(0, this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_max), this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_min), COLORED);
+            }
+            this->epd.SetPartialWindowBlack(paint.GetImage(), int(64 + (xpart * 64)), 0, paint.GetWidth(), paint.GetHeight());
+
+            paint.SetHeight(300);
+            paint.SetWidth(64);
+            paint.Clear(UNCOLORED);
+            for (byte i = 0; i < 16; i++)
+            {
+                if (dataposred <= 1)
+                {
+                    break;
+                };
+                paint.DrawLine(i * 4, this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_pvPower[dataposred]), (i + 1) * 4, this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_pvPower[dataposred - 1]), COLORED);
+
+                dataposred--;
+            }
+            this->epd.SetPartialWindowRed(paint.GetImage(), int(64 + (xpart * 64)), 0, paint.GetWidth(), paint.GetHeight());
+        }
+        // siteTitle
+        this->DrawStringToDisplay(&paint, 8, 2, this->evccapidataptr->globalapidata.siteTitle, &Font24, COLORED, BLACK);
+
+        for (int i = 0; i <= 24; i += 2)
+        {
+            int hour;
+            hour = 24 - i;
+            sprintf(buffer_char, "-%ih", (hour));
+            this->DrawStringToDisplay(&paint, 56 + (i * 12), 292, buffer_char, &Font8, COLORED, BLACK);
+        }
 
         break;
     case IDLE_MODE_LOGO:
         //  Create a new image cache named IMAGE_BW and fill it with white
-        unsigned char image[2550];
-        Paint paint(image, 400, 50); // width should be the multiple of 8
+        paint.SetHeight(50);
+        paint.SetWidth(400);
         Debug("Start Logo");
 
         this->epd.ClearFrame();
@@ -370,4 +496,9 @@ bool MonitorTask::match(const char *ptr1, const char *ptr2)
         ++ptr2;
     }
     return (*ptr1 == *ptr2);
+}
+
+int MonitorTask::getYfromX(double m, double b, int x)
+{
+    return m * x + b;
 }

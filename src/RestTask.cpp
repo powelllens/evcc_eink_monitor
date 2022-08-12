@@ -49,7 +49,7 @@ void RestTask::updateData()
 
     bool tmp_updateavaliable = false;
 
-    if (tm_struct.tm_min == 0 || tm_struct.tm_min == 20 || tm_struct.tm_min == 40)
+    if (tm_struct.tm_min % 20 == 0) // Add Datapoint every 20 min (0,20,40...)
     {
         if (!graphtimetriggered)
         {

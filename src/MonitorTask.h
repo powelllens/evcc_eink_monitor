@@ -1,6 +1,7 @@
 #ifndef _MONITOR_TASK_H_
 #define _MONITOR_TASK_H_
 
+#include <Arduino.h>
 #include <Scheduler.h>
 #include <LeanTask.h>
 #include <Task.h>
@@ -90,6 +91,7 @@ private:
     void DrawImageToDisplay(Paint *paint, int x, int y, const struct sIMG *image, int color);
     void DrawRectangleToDisplay(Paint *paint, int x, int y, int w, int h, int fill, int color);
     bool match(const char *ptr1, const char *ptr2);
+    int getYfromX(double m, double b, int x);
     byte Mode = MODE_IDLE;
     byte ModeOld = 255;
     unsigned long UpdatelastTime = 0;
