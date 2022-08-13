@@ -42,7 +42,6 @@ void MonitorTask::setDisplay()
             break;
         case MODE_WELCOME:
             Debug("Mode Welcome");
-            //this->IdleScreen();
             this->WelcomeScreen();
             break;
         case MODE_MAIN:
@@ -103,7 +102,7 @@ void MonitorTask::getEvccApiData()
 
     if (((millis() - this->UpdatelastTime) > MONITOR_MAXINTERVAL))
     {
-        if (this->Mode != MODE_IDLE || (this->Mode == MODE_IDLE && this->IdleMode != IDLE_MODE_CLEAR))
+        if (this->Mode != MODE_IDLE || (this->Mode == MODE_IDLE && this->IdleMode == IDLE_MODE_LOGO))
         {
             this->UpdateRequired = true;
         }
@@ -136,29 +135,6 @@ void MonitorTask::IdleScreen()
         paint.SetHeight(300);
         paint.SetWidth(64);
 
-        /*for (byte i = 0; i < 71; i++)
-        {
-            this->evccapidataptr->globalapidata.sitePower.hist_gridPower[i] = random(-2000, 5000);
-            this->evccapidataptr->globalapidata.sitePower.hist_pvPower[i] = random(0, 3000);
-            if (this->evccapidataptr->globalapidata.sitePower.hist_gridPower[i] > this->evccapidataptr->globalapidata.sitePower.hist_max)
-            {
-                this->evccapidataptr->globalapidata.sitePower.hist_max = this->evccapidataptr->globalapidata.sitePower.hist_gridPower[i];
-            }
-            if (this->evccapidataptr->globalapidata.sitePower.hist_pvPower[i] > this->evccapidataptr->globalapidata.sitePower.hist_max)
-            {
-                this->evccapidataptr->globalapidata.sitePower.hist_max = this->evccapidataptr->globalapidata.sitePower.hist_pvPower[i];
-            }
-
-            if (this->evccapidataptr->globalapidata.sitePower.hist_gridPower[i] < this->evccapidataptr->globalapidata.sitePower.hist_min)
-            {
-                this->evccapidataptr->globalapidata.sitePower.hist_min = this->evccapidataptr->globalapidata.sitePower.hist_gridPower[i];
-            }
-            if (this->evccapidataptr->globalapidata.sitePower.hist_pvPower[i] < this->evccapidataptr->globalapidata.sitePower.hist_min)
-            {
-                this->evccapidataptr->globalapidata.sitePower.hist_min = this->evccapidataptr->globalapidata.sitePower.hist_pvPower[i];
-            }
-        }*/
-
         int graphy0;
         graphy0 = 30;
         int graphy1;
@@ -169,17 +145,18 @@ void MonitorTask::IdleScreen()
         m = double(graphy0 - graphy1) / double(this->evccapidataptr->globalapidata.sitePower.hist_max - this->evccapidataptr->globalapidata.sitePower.hist_min);
         b = double(graphy0) - m * double(this->evccapidataptr->globalapidata.sitePower.hist_max);
 
-        int minpoint;
-        int maxpoint;
-        minpoint = this->evccapidataptr->globalapidata.sitePower.hist_min / 1000.0;
-        maxpoint = this->evccapidataptr->globalapidata.sitePower.hist_max / 1000.0;
+        int minpointtxt, minpointHLine;
+        int maxpointtxt, maxpointHLine;
+        minpointtxt = (this->evccapidataptr->globalapidata.sitePower.hist_min + 500.0) / 1000.0; // 500 is for a small offset
+        maxpointtxt = (this->evccapidataptr->globalapidata.sitePower.hist_max - 500.0) / 1000.0;
+        minpointHLine = this->evccapidataptr->globalapidata.sitePower.hist_min / 1000.0;
+        maxpointHLine = this->evccapidataptr->globalapidata.sitePower.hist_max / 1000.0;
 
         byte dataposblack;
         byte dataposred;
         dataposblack = 71;
         dataposred = dataposblack;
         byte datawidth;
-        bool DataOK;
 
         this->epd.ClearFrame();
         paint.Clear(UNCOLORED);
@@ -187,9 +164,9 @@ void MonitorTask::IdleScreen()
         sprintf(buffer_char, "%.2f kW", (this->evccapidataptr->globalapidata.sitePower.hist_max / 1000.0));
         this->DrawStringToDisplay(&paint, 2, this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_max), buffer_char, &Font12, COLORED, BLACK);
         sprintf(buffer_char, "%.2f kW", (this->evccapidataptr->globalapidata.sitePower.hist_min / 1000.0));
-        this->DrawStringToDisplay(&paint, 2, this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_min), buffer_char, &Font12, COLORED, BLACK);
+        this->DrawStringToDisplay(&paint, 2, this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_min) - 6, buffer_char, &Font12, COLORED, BLACK);
         // this->DrawStringToDisplay(&paint, 2 + 28, this->getYfromX(m, b, 0) - 6, "0 kW", &Font12, COLORED, BLACK);
-        for (int i = minpoint; i <= maxpoint; i++)
+        for (int i = minpointtxt; i <= maxpointtxt; i++)
         {
             sprintf(buffer_char, "%i kW", i);
             if (i < 0)
@@ -218,7 +195,7 @@ void MonitorTask::IdleScreen()
                 dataposblack--;
                 datawidth++;
             }
-            for (int i = minpoint; i <= maxpoint; i++)
+            for (int i = minpointHLine; i <= maxpointHLine; i++)
             {
                 paint.DrawHorizontalLine(0, this->getYfromX(m, b, double(i) * 1000.0), datawidth * 4, COLORED);
             }
@@ -227,7 +204,7 @@ void MonitorTask::IdleScreen()
             {
                 paint.DrawVerticalLine(0, this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_max), this->getYfromX(m, b, this->evccapidataptr->globalapidata.sitePower.hist_min), COLORED);
             }
-            this->epd.SetPartialWindowBlack(paint.GetImage(), int(64 + (xpart * 64)), 0, paint.GetWidth(), paint.GetHeight());
+            this->epd.SetPartialWindowBlack(paint.GetImage(), int(72 + (xpart * 64)), 0, paint.GetWidth(), paint.GetHeight());
 
             paint.SetHeight(300);
             paint.SetWidth(64);
@@ -242,7 +219,7 @@ void MonitorTask::IdleScreen()
 
                 dataposred--;
             }
-            this->epd.SetPartialWindowRed(paint.GetImage(), int(64 + (xpart * 64)), 0, paint.GetWidth(), paint.GetHeight());
+            this->epd.SetPartialWindowRed(paint.GetImage(), int(72 + (xpart * 64)), 0, paint.GetWidth(), paint.GetHeight());
         }
         // siteTitle
         this->DrawStringToDisplay(&paint, 8, 2, this->evccapidataptr->globalapidata.siteTitle, &Font24, COLORED, BLACK);
@@ -252,8 +229,11 @@ void MonitorTask::IdleScreen()
             int hour;
             hour = 24 - i;
             sprintf(buffer_char, "-%ih", (hour));
-            this->DrawStringToDisplay(&paint, 56 + (i * 12), 292, buffer_char, &Font8, COLORED, BLACK);
+            this->DrawStringToDisplay(&paint, 64 + (i * 12), 292, buffer_char, &Font8, COLORED, BLACK);
         }
+
+        this->DrawStringToDisplay(&paint, 350, 2, "PV Power", &Font8, COLORED, RED);
+        this->DrawStringToDisplay(&paint, 350, 10, "Grid Power", &Font8, COLORED, BLACK);
 
         break;
     case IDLE_MODE_LOGO:

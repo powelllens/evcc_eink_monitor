@@ -54,10 +54,10 @@ void RestTask::updateData()
         if (!graphtimetriggered)
         {
             graphtimetriggered = true;
-            for (byte i = 0; i < 70; i++)
+            for (byte i = 71; i > 0; i--)
             {
-                this->evccapidata.globalapidata.sitePower.hist_gridPower[i + 1] = this->evccapidata.globalapidata.sitePower.hist_gridPower[i];
-                this->evccapidata.globalapidata.sitePower.hist_pvPower[i + 1] = this->evccapidata.globalapidata.sitePower.hist_pvPower[i];
+                this->evccapidata.globalapidata.sitePower.hist_gridPower[i] = this->evccapidata.globalapidata.sitePower.hist_gridPower[i-1];
+                this->evccapidata.globalapidata.sitePower.hist_pvPower[i] = this->evccapidata.globalapidata.sitePower.hist_pvPower[i-1];
             }
             this->evccapidata.globalapidata.sitePower.hist_gridPower[0] = this->evccapidata.getAvgData(&this->evccapidata.globalapidata.sitePower.avg_gridpower);
             this->evccapidata.globalapidata.sitePower.hist_pvPower[0] = this->evccapidata.getAvgData(&this->evccapidata.globalapidata.sitePower.avg_pvpower);
