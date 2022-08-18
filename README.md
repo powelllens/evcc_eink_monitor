@@ -9,24 +9,27 @@ The software was primarily developed and tested for the Waveshare E-Ink Display 
 ## Features
 1. Easy to setup Config Menü, thanks to IoTWebConf
 2. Statuspage for quick functional checks
-3. Accesspoint for inital setup (via phone, computer)
-4. Clear Display if no car is connected
+3. Accesspoint for inital setup (via phone, computer, tablet)
+4. Several Options if no Car is connected (Wallbox idle) -> Clear, EVCC Logo or 24h PVGraph
 5. Fast Display Update if Setting change have been detected
-6. Default 15min Display Update
+6. Adjustable update rate for data and display
 
-## Images
-![E-Ink Display Loading min + pv](docs/images/loadingminpv.jpg)
+## Images with Car connected
 ![E-Ink Display Loading now](docs/images/loadingnow.jpg)
 ![E-Ink Display Loading off](docs/images/loadingoff.jpg)
+
+## Image during Idle with 24h PV Graph
+![ Display Idle - PV Graph](docs/images/24hpvgraph.jpg)
+
+## Setup Page if connected via AP or Wifi
 ![Webserver Setup page](docs/images/setuppage.JPG)
 ![Webserver control page](docs/images/controlpage.JPG)
 
 ## Knows Issues / Limitations
-1. No Fallback strategy if Admin password is lost
+1. Admin Login Password is shown on the Display during startup (this is a Security issue and might change in the future)
 2. No Support for multiple Loadpoints
 3. No Input capabilities, display only
-4. i unfortunately had to rewrite large parts of the waveshare software to get non-blocking code, so the code examples are no longer compatible with other displays.
-
+4. I had to rewrite large parts of the waveshare software to get non-blocking code, so the code examples are no longer compatible with other displays. (Including some bugfixes)
 
 ## Acknowledgements
 
