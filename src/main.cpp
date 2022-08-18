@@ -5,6 +5,7 @@
 #include <RestTask.h>
 #include <MonitorTask.h>
 #include <IotWebConf.h>
+#include <IotWebConfUsing.h>
 #include <IotWebConfTParameter.h>
 #include <ESP8266HTTPClient.h>
 #include <config.h>
@@ -35,13 +36,21 @@ ESP8266HTTPUpdateServer httpUpdater;
 HTTPUpdateServer httpUpdater;
 #endif
 
+char idleDisplayValue[STRING_LEN];
+
+static char idleDisplayStates[][STRING_LEN] = {"clear", "graph", "logo"};
+static char idleDisplayStateNames[][STRING_LEN] = {"Clear", "24h PV Graph", "EVCC Logo"};
+
 IotWebConf iotWebConf(WIFI_AP_SSID, &dnsServer, &server, WIFI_AP_DEFAULT_PASSWORD, CONFIG_VERSION);
 
 iotwebconf::ParameterGroup evccsettings = iotwebconf::ParameterGroup("evccsettings", "EVCC Settings");
-iotwebconf::TextTParameter<STRING_LEN> servername =
-    iotwebconf::Builder<iotwebconf::TextTParameter<STRING_LEN>>("servername").label("Server Name").defaultValue("evcc.local").build();
-iotwebconf::IntTParameter<u32> serverport =
-    iotwebconf::Builder<iotwebconf::IntTParameter<u32>>("serverport").label("Server Port").defaultValue(7070).min(1).max(99999).step(1).placeholder("1..99999").build();
+iotwebconf::TextTParameter<STRING_LEN> servername = iotwebconf::Builder<iotwebconf::TextTParameter<STRING_LEN>>("servername").label("Server Name").defaultValue("evcc.local").build();
+iotwebconf::IntTParameter<u32> serverport = iotwebconf::Builder<iotwebconf::IntTParameter<u32>>("serverport").label("Server Port").defaultValue(7070).min(1).max(99999).step(1).placeholder("1..99999").build();
+
+iotwebconf::ParameterGroup displaysettings = iotwebconf::ParameterGroup("displaysettings", "Display Settings");
+iotwebconf::IntTParameter<u16> dataupdatetime = iotwebconf::Builder<iotwebconf::IntTParameter<u16>>("dataupdatetime").label("Data Update Interval (s)").defaultValue(10).min(5).max(1200).step(1).placeholder("5..1200").build();
+iotwebconf::IntTParameter<u16> displayupdatetime = iotwebconf::Builder<iotwebconf::IntTParameter<u16>>("displayupdatetime").label("Display Update Interval (s)").defaultValue(900).min(300).max(65000).step(1).placeholder("300..65000").build();
+IotWebConfSelectParameter idleDisplayParam = IotWebConfSelectParameter("Select Display Idle", "chooseParam", idleDisplayValue, STRING_LEN, (char *)idleDisplayStates, (char *)idleDisplayStateNames, sizeof(idleDisplayStates) / STRING_LEN, STRING_LEN, idleDisplayStates[0]);
 
 boolean needReset = false;
 
@@ -82,7 +91,12 @@ void setup()
   evccsettings.addItem(&servername);
   evccsettings.addItem(&serverport);
 
+  displaysettings.addItem(&dataupdatetime);
+  displaysettings.addItem(&displayupdatetime);
+  displaysettings.addItem(&idleDisplayParam);
+
   iotWebConf.addParameterGroup(&evccsettings);
+  iotWebConf.addParameterGroup(&displaysettings);
   iotWebConf.setConfigSavedCallback(&configSaved);
   iotWebConf.setWifiConnectionCallback(&wifiConnected);
   iotWebConf.setFormValidator(&formValidator);
@@ -117,8 +131,10 @@ void setup()
 
   iotwebconfTask.setInterval(100);
   Scheduler.start(&iotwebconfTask);
-  restTask.setInterval(10000);
+  restTask.setUpdateInterval(dataupdatetime.value());
   Scheduler.start(&restTask);
+  monitorTask.setUpdateInterval(displayupdatetime.value());
+  monitorTask.setIdleMode(idleDisplayValue);
   Scheduler.start(&monitorTask);
 
   Scheduler.begin();

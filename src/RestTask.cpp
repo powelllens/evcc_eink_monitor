@@ -9,6 +9,8 @@ void RestTask::loop()
 {
     if (this->ServerConfigured && this->WifiAvaliable)
     {
+        time(&this->now);
+        localtime_r(&this->now, &this->tm_struct); // update the structure tm with the current time
         this->updateData();
     }
     this->delay(REST_UPDATEINTERVAL);
@@ -39,6 +41,59 @@ void RestTask::updateData()
         return;
     }
     JsonObject result = doc["result"];
+    this->evccapidata.globalapidata.sitePower.actual_gridPower = result["gridPower"];
+    this->evccapidata.addAvgData(&this->evccapidata.globalapidata.sitePower.avg_gridpower, this->evccapidata.globalapidata.sitePower.actual_gridPower);
+
+    this->evccapidata.globalapidata.sitePower.actual_pvPower = result["pvPower"];
+    this->evccapidata.addAvgData(&this->evccapidata.globalapidata.sitePower.avg_pvpower, this->evccapidata.globalapidata.sitePower.actual_pvPower);
+
+    bool tmp_updateavaliable = false;
+
+    if (tm_struct.tm_min % 20 == 0) // Add Datapoint every 20 min (0,20,40...)
+    {
+        if (!graphtimetriggered)
+        {
+            graphtimetriggered = true;
+            for (byte i = 71; i > 0; i--)
+            {
+                this->evccapidata.globalapidata.sitePower.hist_gridPower[i] = this->evccapidata.globalapidata.sitePower.hist_gridPower[i-1];
+                this->evccapidata.globalapidata.sitePower.hist_pvPower[i] = this->evccapidata.globalapidata.sitePower.hist_pvPower[i-1];
+            }
+            this->evccapidata.globalapidata.sitePower.hist_gridPower[0] = this->evccapidata.getAvgData(&this->evccapidata.globalapidata.sitePower.avg_gridpower);
+            this->evccapidata.globalapidata.sitePower.hist_pvPower[0] = this->evccapidata.getAvgData(&this->evccapidata.globalapidata.sitePower.avg_pvpower);
+
+            this->evccapidata.globalapidata.sitePower.hist_max = 0;
+            this->evccapidata.globalapidata.sitePower.hist_min = 0;
+
+            for (byte i = 0; i < 71; i++)
+            {
+                if (this->evccapidata.globalapidata.sitePower.hist_gridPower[i] > this->evccapidata.globalapidata.sitePower.hist_max)
+                {
+                    this->evccapidata.globalapidata.sitePower.hist_max = this->evccapidata.globalapidata.sitePower.hist_gridPower[i];
+                }
+                if (this->evccapidata.globalapidata.sitePower.hist_pvPower[i] > this->evccapidata.globalapidata.sitePower.hist_max)
+                {
+                    this->evccapidata.globalapidata.sitePower.hist_max = this->evccapidata.globalapidata.sitePower.hist_pvPower[i];
+                }
+
+                if (this->evccapidata.globalapidata.sitePower.hist_gridPower[i] < this->evccapidata.globalapidata.sitePower.hist_min)
+                {
+                    this->evccapidata.globalapidata.sitePower.hist_min = this->evccapidata.globalapidata.sitePower.hist_gridPower[i];
+                }
+                if (this->evccapidata.globalapidata.sitePower.hist_pvPower[i] < this->evccapidata.globalapidata.sitePower.hist_min)
+                {
+                    this->evccapidata.globalapidata.sitePower.hist_min = this->evccapidata.globalapidata.sitePower.hist_pvPower[i];
+                }
+            }
+
+            tmp_updateavaliable = true;
+        }
+    }
+    else
+    {
+        graphtimetriggered = false;
+    }
+
     strcpy(this->evccapidata.globalapidata.siteTitle, result["siteTitle"] | "N/A");
     JsonObject result_loadpoints_0 = result["loadpoints"][0];
     LoadpointData loadpointdata;
@@ -48,7 +103,6 @@ void RestTask::updateData()
     int intbuffer;
     bool boolbuffer;
 
-    bool tmp_updateavaliable = false;
     loadpointdata.activePhases = result_loadpoints_0["activePhases"];
     intbuffer = loadpointdata.targetSoC;
     loadpointdata.targetSoC = result_loadpoints_0["targetSoC"];

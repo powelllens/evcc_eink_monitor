@@ -1,6 +1,7 @@
 #ifndef _MONITOR_TASK_H_
 #define _MONITOR_TASK_H_
 
+#include <Arduino.h>
 #include <Scheduler.h>
 #include <LeanTask.h>
 #include <Task.h>
@@ -18,12 +19,11 @@
 #define Debug(__info)
 #endif
 
-#define MONITOR_UPDATEINTERVAL 10000 // 10sec
-#define MONITOR_MAXINTERVAL 900000
+#define MONITOR_UPDATEINTERVAL 5000 // 5sec
 
 #define MODE_WELCOME 0
 #define MODE_MAIN 1
-#define MODE_CLEAR 2
+#define MODE_IDLE 2
 
 #define COLORED 0
 #define UNCOLORED 1
@@ -38,6 +38,16 @@
 #define MODE_PV "pv"
 #define MODE_MINPV "minpv"
 #define MODE_FAST "now"
+
+#define IDLE_MODE_CLEAR_txt "clear"
+#define IDLE_MODE_GRAPH_txt "graph"
+#define IDLE_MODE_LOGO_txt "logo"
+
+#define IDLE_MODE_CLEAR 0
+#define IDLE_MODE_GRAPH 1
+#define IDLE_MODE_LOGO 2
+
+#define STRING_LEN 64
 
 // Language Specific
 const char txtchargepower[] = "LEISTUNG";
@@ -58,6 +68,8 @@ public:
     void setEvccApiDataPtr(evccDataClass *ptr) { this->evccapidataptr = ptr; };
     void setWifiAvaliable();
     void setWifiDefaultUserPW(const char *WIFI_AP_SSID, const char *WIFI_AP_DEFAULT_PASSWORD, const char *ADMIN_PASSWORD);
+    void setUpdateInterval(u16 interval) { this->MONITOR_MAXINTERVAL = interval * 1000; };
+    void setIdleMode(char State[STRING_LEN]);
 
 protected:
     void setup();
@@ -69,6 +81,7 @@ private:
     // Display variables
     Epd epd;
     int percentToXposition(int percent);
+    void IdleScreen(void);
     void WelcomeScreen(void);
     void MainScreen(void);
     void getTime(long long Duration, char *outStr);
@@ -78,14 +91,17 @@ private:
     void DrawImageToDisplay(Paint *paint, int x, int y, const struct sIMG *image, int color);
     void DrawRectangleToDisplay(Paint *paint, int x, int y, int w, int h, int fill, int color);
     bool match(const char *ptr1, const char *ptr2);
-    byte Mode = MODE_CLEAR;
+    int getYfromX(double m, double b, int x);
+    byte Mode = MODE_IDLE;
     byte ModeOld = 255;
     unsigned long UpdatelastTime = 0;
     bool WifiAvaliable = false;
-    char Wifi_ap_ssid[64] = "EVCC E-Ink Monitor";
-    char Wifi_ap_password[64] = "evccMonitor";
-    char Wifi_admin_password[64] = "";
+    char Wifi_ap_ssid[STRING_LEN] = "EVCC E-Ink Monitor";
+    char Wifi_ap_password[STRING_LEN] = "evccMonitor";
+    char Wifi_admin_password[STRING_LEN] = "";
     bool InitalStart = true;
+    u32 MONITOR_MAXINTERVAL = 900000;
+    byte IdleMode = IDLE_MODE_CLEAR;
 
     evccDataClass *evccapidataptr;
 };

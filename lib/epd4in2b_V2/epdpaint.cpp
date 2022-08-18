@@ -235,17 +235,22 @@ void Paint::DrawLine(int x0, int y0, int x1, int y1, int colored)
     int sx = x0 < x1 ? 1 : -1;
     int dy = y1 - y0 <= 0 ? y1 - y0 : y0 - y1;
     int sy = y0 < y1 ? 1 : -1;
-    int err = dx + dy;
+    int err = dx + dy, e2;
 
-    while ((x0 != x1) && (y0 != y1))
+    while (true)
     {
         DrawPixel(x0, y0, colored);
-        if (2 * err >= dy)
+        if ((x0 == x1) && (y0 == y1))
+        {
+            break;
+        };
+        e2 = 2 * err;
+        if (e2 > dy)
         {
             err += dy;
             x0 += sx;
         }
-        if (2 * err <= dx)
+        if (e2 < dx)
         {
             err += dx;
             y0 += sy;
@@ -392,7 +397,7 @@ parameter:
 void Paint::DrawImage(const unsigned char *image_buffer, int x, int y, int width, int height)
 {
     int n, m;
-    int w_byte = (width % 8) ? (width / 8) + 1 : width / 8; //amount of bytes in horizontal line
+    int w_byte = (width % 8) ? (width / 8) + 1 : width / 8; // amount of bytes in horizontal line
     int Addr = 0;
     int pAddr = 0;
     for (m = 0; m < height; m++)
@@ -400,7 +405,7 @@ void Paint::DrawImage(const unsigned char *image_buffer, int x, int y, int width
         for (n = 0; n < w_byte; n++)
         { // 8 pixel =  1 byte
             Addr = n + m * w_byte;
-            pAddr = n + (x / 8) + (((m + y) * this->width)/8);
+            pAddr = n + (x / 8) + (((m + y) * this->width) / 8);
             this->image[pAddr] = (unsigned char)image_buffer[Addr] & this->image[pAddr];
         }
     }
