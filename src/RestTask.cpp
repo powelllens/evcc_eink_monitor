@@ -104,11 +104,11 @@ void RestTask::updateData()
     bool boolbuffer;
 
     loadpointdata.activePhases = result_loadpoints_0["activePhases"];
-    intbuffer = loadpointdata.targetSoC;
-    loadpointdata.targetSoC = result_loadpoints_0["targetSoC"];
-    tmp_updateavaliable = (tmp_updateavaliable) || (intbuffer != loadpointdata.targetSoC);
-    loadpointdata.vehicleSoC = result_loadpoints_0["vehicleSoC"];
-    loadpointdata.minSoC = result_loadpoints_0["minSoC"];
+    intbuffer = loadpointdata.targetSoc;
+    loadpointdata.targetSoc = result_loadpoints_0["targetSoc"];
+    tmp_updateavaliable = (tmp_updateavaliable) || (intbuffer != loadpointdata.targetSoc);
+    loadpointdata.vehicleSoc = result_loadpoints_0["vehicleSoc"];
+    loadpointdata.minSoc = result_loadpoints_0["minSoc"];
     loadpointdata.vehicleRange = result_loadpoints_0["vehicleRange"];
     loadpointdata.chargePower = result_loadpoints_0["chargePower"];
     loadpointdata.chargedEnergy = result_loadpoints_0["chargedEnergy"];

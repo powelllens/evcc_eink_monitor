@@ -335,24 +335,24 @@ void MonitorTask::MainScreen()
     paint.Clear(UNCOLORED);
 
     paint.DrawRectangle(50, 5, 360, 41, COLORED);
-    // Rectangle for Loadingstatus and targetSoc (in black if vehicleCapacity >= vehicleSoC )
-    if (this->evccapidataptr->globalapidata.loadPointData[0].vehicleSoC >= this->evccapidataptr->globalapidata.loadPointData[0].minSoC)
+    // Rectangle for Loadingstatus and targetSoc (in black if vehicleCapacity >= vehicleSoc )
+    if (this->evccapidataptr->globalapidata.loadPointData[0].vehicleSoc >= this->evccapidataptr->globalapidata.loadPointData[0].minSoc)
     {
-        paint.DrawFilledRectangle(52, 7, percentToXposition(this->evccapidataptr->globalapidata.loadPointData[0].vehicleSoC), 39, COLORED);
+        paint.DrawFilledRectangle(52, 7, percentToXposition(this->evccapidataptr->globalapidata.loadPointData[0].vehicleSoc), 39, COLORED);
     }
-    int positionX = percentToXposition(this->evccapidataptr->globalapidata.loadPointData[0].targetSoC);
+    int positionX = percentToXposition(this->evccapidataptr->globalapidata.loadPointData[0].targetSoc);
     paint.DrawFilledRectangle(positionX - 4, 0, positionX + 4, 48, COLORED);
     this->epd.SetPartialWindowBlack(paint.GetImage(), 0, 163, 400, 50);
 
     // Ladestand
     this->DrawStringToDisplay(&paint, 12, 215, txtvehicleCapacity, &Font16, COLORED, BLACK);
-    sprintf(buffer_char, "%d %s", this->evccapidataptr->globalapidata.loadPointData[0].vehicleSoC, "%");
+    sprintf(buffer_char, "%d %s", this->evccapidataptr->globalapidata.loadPointData[0].vehicleSoc, "%");
     this->DrawStringToDisplay(&paint, 12, 230, buffer_char, &Font16, COLORED, BLACK);
     sprintf(buffer_char, "%d %s", this->evccapidataptr->globalapidata.loadPointData[0].vehicleRange, "km");
     this->DrawStringToDisplay(&paint, 12, 245, buffer_char, &Font16, COLORED, BLACK);
     // Ladeziel
-    this->DrawStringToDisplay(&paint, 310, 215, txttargetSoC, &Font16, COLORED, BLACK);
-    sprintf(buffer_char, "%d %s", this->evccapidataptr->globalapidata.loadPointData[0].targetSoC, "%");
+    this->DrawStringToDisplay(&paint, 310, 215, txttargetSoc, &Font16, COLORED, BLACK);
+    sprintf(buffer_char, "%d %s", this->evccapidataptr->globalapidata.loadPointData[0].targetSoc, "%");
     this->DrawStringToDisplay(&paint, 310, 230, buffer_char, &Font16, COLORED, BLACK);
 
     // Modus
@@ -384,13 +384,13 @@ void MonitorTask::MainScreen()
         this->DrawImageToDisplay(&paint, 12, 165, &Image_Strike, BLACK);
     }
 
-    // Ladestand - in red due to vehicleCapacity < vehicleSoC
-    if (this->evccapidataptr->globalapidata.loadPointData[0].vehicleSoC < this->evccapidataptr->globalapidata.loadPointData[0].minSoC)
+    // Ladestand - in red due to vehicleCapacity < vehicleSoc
+    if (this->evccapidataptr->globalapidata.loadPointData[0].vehicleSoc < this->evccapidataptr->globalapidata.loadPointData[0].minSoc)
     {
         paint.SetWidth(400);
         paint.SetHeight(50);
         paint.Clear(UNCOLORED);
-        paint.DrawFilledRectangle(52, 7, percentToXposition(this->evccapidataptr->globalapidata.loadPointData[0].vehicleSoC), 39, COLORED);
+        paint.DrawFilledRectangle(52, 7, percentToXposition(this->evccapidataptr->globalapidata.loadPointData[0].vehicleSoc), 39, COLORED);
         this->epd.SetPartialWindowBlack(paint.GetImage(), 0, 163, 400, 50);
     }
 
