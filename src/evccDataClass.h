@@ -16,9 +16,9 @@ struct AvgData
 struct LoadpointData
 {
     int activePhases;                  // 1P|3P
-    int targetSoC;                     // %
-    int minSoC;                        //%
-    int vehicleSoC;                    // %
+    int targetSoc;                     // %
+    int minSoc;                        //%
+    int vehicleSoc;                    // %
     int vehicleRange;                  // km
     int chargePower;                   // Watts
     double chargedEnergy;              // Watts
