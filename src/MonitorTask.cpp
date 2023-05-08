@@ -410,7 +410,7 @@ void MonitorTask::getTime(long long Duration, char *outStr)
     long long chargeRemainingDuration_hours = Duration / 3600000000000;
     long long chargeRemainingDuration_min = Duration / 60000000000 - chargeRemainingDuration_hours * 60;
 
-    sprintf(outStr, "%lld:%lld h", chargeRemainingDuration_hours, chargeRemainingDuration_min);
+    sprintf(outStr, "%lld:%02lld h", chargeRemainingDuration_hours, chargeRemainingDuration_min);
 }
 
 void MonitorTask::DrawStringToDisplay(Paint *paint, int x, int y, const char *text, sFONT *font, int colored, int color)
