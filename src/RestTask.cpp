@@ -29,7 +29,7 @@ void RestTask::updateData()
     sprintf(serverPath, "http://%s:%i/api/state", this->servername, this->serverport);
     String jsonBuffer;
     jsonBuffer = httpGETRequest(serverPath);
-    DynamicJsonDocument doc(3500);
+    DynamicJsonDocument doc(6000);
 
     DeserializationError error = deserializeJson(doc, jsonBuffer);
 
