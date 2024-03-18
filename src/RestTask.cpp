@@ -105,7 +105,7 @@ void RestTask::updateData()
 
     loadpointdata.activePhases = result_loadpoints_0["activePhases"];
     intbuffer = loadpointdata.targetSoc;
-    loadpointdata.targetSoc = result_loadpoints_0["targetSoc"];
+    loadpointdata.targetSoc = result_loadpoints_0["effectiveLimitSoc"];
     tmp_updateavaliable = (tmp_updateavaliable) || (intbuffer != loadpointdata.targetSoc);
     loadpointdata.vehicleSoc = result_loadpoints_0["vehicleSoc"];
     loadpointdata.minSoc = result_loadpoints_0["minSoc"];
@@ -124,7 +124,9 @@ void RestTask::updateData()
 
     strcpy(loadpointdata.mode, result_loadpoints_0["mode"] | "N/A");
     strcpy(loadpointdata.title, result_loadpoints_0["title"] | "N/A");
-    strcpy(loadpointdata.vehicleTitle, result_loadpoints_0["vehicleTitle"] | "N/A");
+    char vehicleName[30];
+    strcpy(vehicleName, result_loadpoints_0["vehicleName"] | "N/A");
+    strcpy(loadpointdata.vehicleTitle, result["vehicles"][vehicleName]["title"] | "N/A");
 
     this->evccapidata.globalapidata.loadPointData[0] = loadpointdata;
     this->evccapidata.setNewData(tmp_updateavaliable);
