@@ -40,11 +40,10 @@ void RestTask::updateData()
         this->lastAPIUpdate = millis();
         return;
     }
-    JsonObject result = doc["result"];
-    this->evccapidata.globalapidata.sitePower.actual_gridPower = result["gridPower"];
+    this->evccapidata.globalapidata.sitePower.actual_gridPower = doc["gridPower"];
     this->evccapidata.addAvgData(&this->evccapidata.globalapidata.sitePower.avg_gridpower, this->evccapidata.globalapidata.sitePower.actual_gridPower);
 
-    this->evccapidata.globalapidata.sitePower.actual_pvPower = result["pvPower"];
+    this->evccapidata.globalapidata.sitePower.actual_pvPower = doc["pvPower"];
     this->evccapidata.addAvgData(&this->evccapidata.globalapidata.sitePower.avg_pvpower, this->evccapidata.globalapidata.sitePower.actual_pvPower);
 
     bool tmp_updateavaliable = false;
@@ -94,8 +93,8 @@ void RestTask::updateData()
         graphtimetriggered = false;
     }
 
-    strcpy(this->evccapidata.globalapidata.siteTitle, result["siteTitle"] | "N/A");
-    JsonObject result_loadpoints_0 = result["loadpoints"][0];
+    strcpy(this->evccapidata.globalapidata.siteTitle, doc["siteTitle"] | "N/A");
+    JsonObject result_loadpoints_0 = doc["loadpoints"][0];
     LoadpointData loadpointdata;
 
     loadpointdata = this->evccapidata.globalapidata.loadPointData[0];
@@ -126,7 +125,7 @@ void RestTask::updateData()
     strcpy(loadpointdata.title, result_loadpoints_0["title"] | "N/A");
     char vehicleName[30];
     strcpy(vehicleName, result_loadpoints_0["vehicleName"] | "N/A");
-    strcpy(loadpointdata.vehicleTitle, result["vehicles"][vehicleName]["title"] | "N/A");
+    strcpy(loadpointdata.vehicleTitle, doc["vehicles"][vehicleName]["title"] | "N/A");
 
     this->evccapidata.globalapidata.loadPointData[0] = loadpointdata;
     this->evccapidata.setNewData(tmp_updateavaliable);
