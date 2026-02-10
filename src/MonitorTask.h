@@ -42,10 +42,12 @@
 #define IDLE_MODE_CLEAR_txt "clear"
 #define IDLE_MODE_GRAPH_txt "graph"
 #define IDLE_MODE_LOGO_txt "logo"
+#define IDLE_MODE_DASHBOARD_TS_txt "dashboard_ts"
 
 #define IDLE_MODE_CLEAR 0
 #define IDLE_MODE_GRAPH 1
 #define IDLE_MODE_LOGO 2
+#define IDLE_MODE_DASHBOARD_TS 3
 
 #define STRING_LEN 64
 
@@ -70,6 +72,7 @@ public:
     void setWifiDefaultUserPW(const char *WIFI_AP_SSID, const char *WIFI_AP_DEFAULT_PASSWORD, const char *ADMIN_PASSWORD);
     void setUpdateInterval(u16 interval) { this->MONITOR_MAXINTERVAL = interval * 1000; };
     void setIdleMode(char State[STRING_LEN]);
+    void setCombineViews(bool enabled) { this->combineViews = enabled; };
 
 protected:
     void setup();
@@ -102,6 +105,9 @@ private:
     bool InitalStart = true;
     u32 MONITOR_MAXINTERVAL = 900000;
     byte IdleMode = IDLE_MODE_CLEAR;
+    bool combineViews = false;
+    unsigned long lastViewSwitch = 0;
+    bool showingMainView = true;
 
     evccDataClass *evccapidataptr;
 };
