@@ -15,6 +15,15 @@ void MonitorTask::loop()
         this->InitalStart = false;
     }
 
+    // TEST MODE: Skip welcome screen after first display
+    // This allows testing the display without WiFi connection
+    if (this->Mode == MODE_WELCOME && !this->InitalStart)
+    {
+        // After showing welcome screen once, switch to idle mode
+        // This simulates having WiFi but no car connected
+        this->Mode = MODE_IDLE;
+    }
+
     this->setDisplay();
     this->getEvccApiData();
 
@@ -68,6 +77,10 @@ void MonitorTask::setIdleMode(char State[STRING_LEN])
     {
         this->IdleMode = IDLE_MODE_LOGO;
     };
+    if (match(State, IDLE_MODE_DASHBOARD_TS_txt))
+    {
+        this->IdleMode = IDLE_MODE_DASHBOARD_TS;
+    };
 }
 
 void MonitorTask::setWifiDefaultUserPW(const char *WIFI_AP_SSID, const char *WIFI_AP_DEFAULT_PASSWORD, const char *ADMIN_PASSWORD)
@@ -88,6 +101,13 @@ void MonitorTask::getEvccApiData()
     {
         if (this->evccapidataptr->globalapidata.loadPointData[0].connected)
         {
+            // Only reset timer if car just got connected (mode was not MAIN before)
+            if (this->Mode != MODE_MAIN) {
+                this->lastViewSwitch = millis();
+                this->showingMainView = true;
+                Debug("Car connected - timer reset");
+            }
+            
             this->Mode = MODE_MAIN;
             this->UpdateRequired = true;
             this->evccapidataptr->setClearNew();
@@ -97,6 +117,33 @@ void MonitorTask::getEvccApiData()
             this->Mode = MODE_IDLE;
             this->UpdateRequired = true;
             this->evccapidataptr->setClearNew();
+        }
+    }
+
+    // Check for view switching when combine views is enabled and car is connected
+    if (this->combineViews && this->Mode == MODE_MAIN && this->evccapidataptr->globalapidata.loadPointData[0].connected)
+    {
+        unsigned long currentTime = millis();
+        unsigned long timeSinceLastSwitch = currentTime - this->lastViewSwitch;
+        
+        // Debug output every 10 seconds
+        if (timeSinceLastSwitch % 10000 < 5000) {
+            Debug("CombineViews active - time since last switch: ");
+            Debug(timeSinceLastSwitch / 1000);
+            Debug(" seconds");
+        }
+        
+        // Switch view every 60 seconds (60000 ms)
+        if (timeSinceLastSwitch >= 60000)
+        {
+            this->showingMainView = !this->showingMainView;
+            this->lastViewSwitch = currentTime;
+            this->UpdateRequired = true;
+            
+            Serial.print("=== VIEW SWITCH === Now showing: ");
+            Serial.println(this->showingMainView ? "Main Charging View" : "Dashboard View");
+            Serial.print("Free Heap: ");
+            Serial.println(ESP.getFreeHeap());
         }
     }
 
@@ -132,6 +179,8 @@ void MonitorTask::IdleScreen()
         this->epd.ClearFrame();
         break;
     case IDLE_MODE_GRAPH:
+    {
+        // ===== ORIGINAL 24H GRAPH CODE (restored) =====
         paint.SetHeight(300);
         paint.SetWidth(64);
 
@@ -234,8 +283,140 @@ void MonitorTask::IdleScreen()
 
         this->DrawStringToDisplay(&paint, 350, 2, "PV Power", &Font8, COLORED, RED);
         this->DrawStringToDisplay(&paint, 350, 10, "Grid Power", &Font8, COLORED, BLACK);
-
+        
         break;
+    }
+    case IDLE_MODE_DASHBOARD_TS:
+    {
+        // ===== ECHTZEIT-DASHBOARD TS CODE =====
+        this->epd.ClearFrame();
+        paint.Clear(UNCOLORED);
+
+        // Get current values
+        float currentPvPower = this->evccapidataptr->globalapidata.sitePower.actual_pvPower / 1000.0;      // Convert to kW
+        float currentGridPower = this->evccapidataptr->globalapidata.sitePower.actual_gridPower / 1000.0; // Convert to kW
+        
+        // DEBUG: Print actual values
+        Debug("PV Power from EVCC: ");
+        Debug(currentPvPower);
+        Debug("Grid Power from EVCC: ");
+        Debug(currentGridPower);
+        
+        // Calculate consumption (Grid + PV = Total Consumption)
+        float currentConsumption = currentGridPower + currentPvPower;
+        
+        // Ensure positive values for display
+        float pvDisplay = (currentPvPower > 0) ? currentPvPower : 0;
+        float consumptionDisplay = (currentConsumption > 0) ? currentConsumption : 0;
+        
+        // Find max value for scaling
+        float maxValue = (pvDisplay > consumptionDisplay) ? pvDisplay : consumptionDisplay;
+        if (maxValue < 1.0) maxValue = 1.0; // Minimum scale of 1 kW
+        
+        // Display title
+        this->DrawStringToDisplay(&paint, 8, 10, this->evccapidataptr->globalapidata.siteTitle, &Font24, COLORED, BLACK);
+        
+        // Show sun/moon symbol based on PV production and grid power
+        if (pvDisplay == 0) {
+            // Night time: Show moon symbol (crescent)
+            this->DrawStringToDisplay(&paint, 90, 10, ")", &Font24, COLORED, BLACK);
+        } else if (currentGridPower <= 0) {
+            // Day time with 100% solar: Show sun symbol
+            this->DrawStringToDisplay(&paint, 90, 10, "*", &Font24, COLORED, RED);
+        }
+        
+        // EVCC Logo next to title (safe position within 400px width)
+        this->DrawImageToDisplay(&paint, 260, 8, &Image_EVCC_B, BLACK);
+        this->DrawImageToDisplay(&paint, 311, 8, &Image_EVCC_R, RED);
+        
+        // PV Production Bar (Red)
+        this->DrawStringToDisplay(&paint, 20, 60, "PV ERZEUGUNG:", &Font20, COLORED, BLACK);
+        // Display in Watt if < 1 kW, otherwise in kW
+        if (pvDisplay < 1.0) {
+            sprintf(buffer_char, "%.0f W", pvDisplay * 1000);
+        } else {
+            sprintf(buffer_char, "%.2f kW", pvDisplay);
+        }
+        this->DrawStringToDisplay(&paint, 280, 60, buffer_char, &Font24, COLORED, RED);
+        
+        // Draw PV bar
+        int barWidth = (int)((pvDisplay / maxValue) * 340);
+        paint.SetHeight(40);
+        paint.SetWidth(350);
+        paint.Clear(UNCOLORED);
+        paint.DrawRectangle(0, 0, 349, 39, COLORED);
+        if (barWidth > 2) {
+            paint.DrawFilledRectangle(2, 2, barWidth, 37, COLORED);
+        }
+        this->epd.SetPartialWindowRed(paint.GetImage(), 25, 90, 350, 40);
+        
+        // Consumption Bar (Black)
+        this->DrawStringToDisplay(&paint, 20, 160, "GESAMTVERBRAUCH:", &Font20, COLORED, BLACK);
+        // Display in Watt if < 1 kW, otherwise in kW
+        if (consumptionDisplay < 1.0) {
+            sprintf(buffer_char, "%.0f W", consumptionDisplay * 1000);
+        } else {
+            sprintf(buffer_char, "%.2f kW", consumptionDisplay);
+        }
+        this->DrawStringToDisplay(&paint, 280, 160, buffer_char, &Font24, COLORED, BLACK);
+        
+        // Draw Consumption bar
+        barWidth = (int)((consumptionDisplay / maxValue) * 340);
+        paint.SetHeight(40);
+        paint.SetWidth(350);
+        paint.Clear(UNCOLORED);
+        paint.DrawRectangle(0, 0, 349, 39, COLORED);
+        if (barWidth > 2) {
+            paint.DrawFilledRectangle(2, 2, barWidth, 37, COLORED);
+        }
+        this->epd.SetPartialWindowBlack(paint.GetImage(), 25, 190, 350, 40);
+        
+        // Grid Power info: Show both import and export in one line
+        char importStr[20];
+        char exportStr[20];
+        
+        // Format import (positive grid power)
+        if (currentGridPower > 0) {
+            if (currentGridPower < 1.0) {
+                sprintf(importStr, "%.0f W", currentGridPower * 1000);
+            } else {
+                sprintf(importStr, "%.2f kW", currentGridPower);
+            }
+        } else {
+            strcpy(importStr, "0 W");
+        }
+        
+        // Format export (negative grid power)
+        if (currentGridPower < 0) {
+            float exportPower = -currentGridPower;
+            if (exportPower < 1.0) {
+                sprintf(exportStr, "%.0f W", exportPower * 1000);
+            } else {
+                sprintf(exportStr, "%.2f kW", exportPower);
+            }
+        } else {
+            strcpy(exportStr, "0 W");
+        }
+        
+        // Display both values with aligned pipes
+        sprintf(buffer_char, "BEZUG: %s", importStr);
+        this->DrawStringToDisplay(&paint, 20, 240, buffer_char, &Font16, COLORED, BLACK);
+        this->DrawStringToDisplay(&paint, 180, 240, "|", &Font16, COLORED, BLACK);
+        sprintf(buffer_char, "EINSP.: %s", exportStr);
+        this->DrawStringToDisplay(&paint, 195, 240, buffer_char, &Font16, COLORED, BLACK);
+        
+        // Solar forecast: TODAY remaining | TOMORROW with aligned pipe
+        float todayRemaining = this->evccapidataptr->globalapidata.sitePower.forecast_today;
+        float tomorrowForecast = this->evccapidataptr->globalapidata.sitePower.forecast_tomorrow;
+        sprintf(buffer_char, "HEUTE: %.1f kWh", todayRemaining);
+        this->DrawStringToDisplay(&paint, 20, 270, buffer_char, &Font16, COLORED, BLACK);
+        this->DrawStringToDisplay(&paint, 180, 270, "|", &Font16, COLORED, BLACK);
+        sprintf(buffer_char, "MORGEN: %.1f kWh", tomorrowForecast);
+        this->DrawStringToDisplay(&paint, 195, 270, buffer_char, &Font16, COLORED, BLACK);
+        
+        break;
+        // ===== END OF NEW BAR CHART CODE =====
+    }
     case IDLE_MODE_LOGO:
         //  Create a new image cache named IMAGE_BW and fill it with white
         paint.SetHeight(50);
@@ -291,8 +472,117 @@ void MonitorTask::MainScreen()
     // Create a new image cache named IMAGE_BW and fill it with white
     unsigned char image[2550];
     Paint paint(image, 400, 50); // width should be the multiple of 8
-    Debug("Start Main");
+    
+    // If combine views is enabled and we should show dashboard, render dashboard instead
+    if (this->combineViews && !this->showingMainView && this->evccapidataptr->globalapidata.loadPointData[0].connected)
+    {
+        Debug("Start Main - Dashboard View");
+        this->epd.ClearFrame();
+        paint.Clear(UNCOLORED);
 
+        // Get current values
+        float currentPvPower = this->evccapidataptr->globalapidata.sitePower.actual_pvPower / 1000.0;
+        float currentGridPower = this->evccapidataptr->globalapidata.sitePower.actual_gridPower / 1000.0;
+        float currentConsumption = currentGridPower + currentPvPower;
+        float pvDisplay = (currentPvPower > 0) ? currentPvPower : 0;
+        float consumptionDisplay = (currentConsumption > 0) ? currentConsumption : 0;
+        float maxValue = (pvDisplay > consumptionDisplay) ? pvDisplay : consumptionDisplay;
+        if (maxValue < 1.0) maxValue = 1.0;
+        
+        // Display title
+        this->DrawStringToDisplay(&paint, 8, 10, this->evccapidataptr->globalapidata.siteTitle, &Font24, COLORED, BLACK);
+        
+        // Sun/moon symbol
+        if (pvDisplay == 0) {
+            this->DrawStringToDisplay(&paint, 90, 10, ")", &Font24, COLORED, BLACK);
+        } else if (currentGridPower <= 0) {
+            this->DrawStringToDisplay(&paint, 90, 10, "*", &Font24, COLORED, RED);
+        }
+        
+        // EVCC Logo
+        this->DrawImageToDisplay(&paint, 260, 8, &Image_EVCC_B, BLACK);
+        this->DrawImageToDisplay(&paint, 311, 8, &Image_EVCC_R, RED);
+        
+        // PV Production Bar
+        this->DrawStringToDisplay(&paint, 20, 60, "PV ERZEUGUNG:", &Font20, COLORED, BLACK);
+        if (pvDisplay < 1.0) {
+            sprintf(buffer_char, "%.0f W", pvDisplay * 1000);
+        } else {
+            sprintf(buffer_char, "%.2f kW", pvDisplay);
+        }
+        this->DrawStringToDisplay(&paint, 280, 60, buffer_char, &Font24, COLORED, RED);
+        
+        int barWidth = (int)((pvDisplay / maxValue) * 340);
+        paint.SetHeight(40);
+        paint.SetWidth(350);
+        paint.Clear(UNCOLORED);
+        paint.DrawRectangle(0, 0, 349, 39, COLORED);
+        if (barWidth > 2) {
+            paint.DrawFilledRectangle(2, 2, barWidth, 37, COLORED);
+        }
+        this->epd.SetPartialWindowRed(paint.GetImage(), 25, 90, 350, 40);
+        
+        // Consumption Bar
+        this->DrawStringToDisplay(&paint, 20, 160, "GESAMTVERBRAUCH:", &Font20, COLORED, BLACK);
+        if (consumptionDisplay < 1.0) {
+            sprintf(buffer_char, "%.0f W", consumptionDisplay * 1000);
+        } else {
+            sprintf(buffer_char, "%.2f kW", consumptionDisplay);
+        }
+        this->DrawStringToDisplay(&paint, 280, 160, buffer_char, &Font24, COLORED, BLACK);
+        
+        barWidth = (int)((consumptionDisplay / maxValue) * 340);
+        paint.SetHeight(40);
+        paint.SetWidth(350);
+        paint.Clear(UNCOLORED);
+        paint.DrawRectangle(0, 0, 349, 39, COLORED);
+        if (barWidth > 2) {
+            paint.DrawFilledRectangle(2, 2, barWidth, 37, COLORED);
+        }
+        this->epd.SetPartialWindowBlack(paint.GetImage(), 25, 190, 350, 40);
+        
+        // Grid Power info
+        char importStr[20];
+        char exportStr[20];
+        if (currentGridPower > 0) {
+            if (currentGridPower < 1.0) {
+                sprintf(importStr, "%.0f W", currentGridPower * 1000);
+            } else {
+                sprintf(importStr, "%.2f kW", currentGridPower);
+            }
+        } else {
+            strcpy(importStr, "0 W");
+        }
+        if (currentGridPower < 0) {
+            float exportPower = -currentGridPower;
+            if (exportPower < 1.0) {
+                sprintf(exportStr, "%.0f W", exportPower * 1000);
+            } else {
+                sprintf(exportStr, "%.2f kW", exportPower);
+            }
+        } else {
+            strcpy(exportStr, "0 W");
+        }
+        sprintf(buffer_char, "BEZUG: %s", importStr);
+        this->DrawStringToDisplay(&paint, 20, 240, buffer_char, &Font16, COLORED, BLACK);
+        this->DrawStringToDisplay(&paint, 180, 240, "|", &Font16, COLORED, BLACK);
+        sprintf(buffer_char, "EINSP.: %s", exportStr);
+        this->DrawStringToDisplay(&paint, 195, 240, buffer_char, &Font16, COLORED, BLACK);
+        
+        // Solar forecast
+        float todayRemaining = this->evccapidataptr->globalapidata.sitePower.forecast_today;
+        float tomorrowForecast = this->evccapidataptr->globalapidata.sitePower.forecast_tomorrow;
+        sprintf(buffer_char, "HEUTE: %.1f kWh", todayRemaining);
+        this->DrawStringToDisplay(&paint, 20, 270, buffer_char, &Font16, COLORED, BLACK);
+        this->DrawStringToDisplay(&paint, 180, 270, "|", &Font16, COLORED, BLACK);
+        sprintf(buffer_char, "MORGEN: %.1f kWh", tomorrowForecast);
+        this->DrawStringToDisplay(&paint, 195, 270, buffer_char, &Font16, COLORED, BLACK);
+        
+        return;
+    }
+    
+    // Normal charging view
+    Debug("Start Main - Charging View");
     this->epd.ClearFrame();
 
     // siteTitle

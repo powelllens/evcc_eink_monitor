@@ -38,8 +38,8 @@ HTTPUpdateServer httpUpdater;
 
 char idleDisplayValue[STRING_LEN];
 
-static char idleDisplayStates[][STRING_LEN] = {"clear", "graph", "logo"};
-static char idleDisplayStateNames[][STRING_LEN] = {"Clear", "24h PV Graph", "EVCC Logo"};
+static char idleDisplayStates[][STRING_LEN] = {"clear", "graph", "logo", "dashboard_ts"};
+static char idleDisplayStateNames[][STRING_LEN] = {"Clear", "24h PV Graph", "EVCC Logo", "Echtzeit-Dashboard TS"};
 
 IotWebConf iotWebConf(WIFI_AP_SSID, &dnsServer, &server, WIFI_AP_DEFAULT_PASSWORD, CONFIG_VERSION);
 
@@ -50,7 +50,8 @@ iotwebconf::IntTParameter<u32> serverport = iotwebconf::Builder<iotwebconf::IntT
 iotwebconf::ParameterGroup displaysettings = iotwebconf::ParameterGroup("displaysettings", "Display Settings");
 iotwebconf::IntTParameter<u16> dataupdatetime = iotwebconf::Builder<iotwebconf::IntTParameter<u16>>("dataupdatetime").label("Data Update Interval (s)").defaultValue(10).min(5).max(1200).step(1).placeholder("5..1200").build();
 iotwebconf::IntTParameter<u16> displayupdatetime = iotwebconf::Builder<iotwebconf::IntTParameter<u16>>("displayupdatetime").label("Display Update Interval (s)").defaultValue(900).min(300).max(65000).step(1).placeholder("300..65000").build();
-IotWebConfSelectParameter idleDisplayParam = IotWebConfSelectParameter("Select Display Idle", "chooseParam", idleDisplayValue, STRING_LEN, (char *)idleDisplayStates, (char *)idleDisplayStateNames, sizeof(idleDisplayStates) / STRING_LEN, STRING_LEN, idleDisplayStates[0]);
+IotWebConfSelectParameter idleDisplayParam = IotWebConfSelectParameter("Select Display Idle", "chooseParam", idleDisplayValue, STRING_LEN, (char *)idleDisplayStates, (char *)idleDisplayStateNames, sizeof(idleDisplayStates) / STRING_LEN, STRING_LEN, idleDisplayStates[3]);
+iotwebconf::CheckboxTParameter combineViewsParam = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("combineViews").label("Combine both Views (switch every minute during charging)").defaultValue(true).build();
 
 boolean needReset = false;
 
@@ -94,6 +95,7 @@ void setup()
   displaysettings.addItem(&dataupdatetime);
   displaysettings.addItem(&displayupdatetime);
   displaysettings.addItem(&idleDisplayParam);
+  displaysettings.addItem(&combineViewsParam);
 
   iotWebConf.addParameterGroup(&evccsettings);
   iotWebConf.addParameterGroup(&displaysettings);
@@ -101,6 +103,9 @@ void setup()
   iotWebConf.setWifiConnectionCallback(&wifiConnected);
   iotWebConf.setFormValidator(&formValidator);
   iotWebConf.getApTimeoutParameter()->visible = true;
+  
+  // Disable AP timeout - stay in Station mode once connected
+  iotWebConf.setApTimeoutMs(0);
 
   // -- Define how to handle updateServer calls.
   iotWebConf.setupUpdateServer(
@@ -111,6 +116,17 @@ void setup()
 
   // -- Initializing the configuration.
   iotWebConf.init();
+  
+  // Force dashboard_ts mode if current config is 'graph' (one-time migration)
+  if (strcmp(idleDisplayValue, "graph") == 0) {
+    strcpy(idleDisplayValue, "dashboard_ts");
+    iotWebConf.saveConfig();
+    Serial.println("Config migrated from 'graph' to 'dashboard_ts'");
+  }
+  
+  // Log current combineViews setting
+  Serial.print("combineViews setting: ");
+  Serial.println(combineViewsParam.value() ? "true" : "false");
 
   // -- Set up required URL handlers on the web server.
   server.on("/", handleRoot);
@@ -135,6 +151,7 @@ void setup()
   Scheduler.start(&restTask);
   monitorTask.setUpdateInterval(displayupdatetime.value());
   monitorTask.setIdleMode(idleDisplayValue);
+  monitorTask.setCombineViews(combineViewsParam.value());
   Scheduler.start(&monitorTask);
 
   Scheduler.begin();
